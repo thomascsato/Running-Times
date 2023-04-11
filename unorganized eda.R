@@ -84,9 +84,9 @@ View(marathon %>% arrange(Year))
 # Upon observation, it seems that the gaps in the graph have something to do with the bucket width or something like that (???)
 
 unique(running_times$Name)
-# There are 1903 unique names in this dataset of 18244 observations
-18244 / 1903
-# So on average, if you have a top 1000 time in your event, chances are you have 9.6 top times as well
+# There are 2903 unique names in this dataset of 18244 observations
+18244 / 2903
+# So on average, if you have a top 1000 time in your event, chances are you have 6.3 top times as well
 
 running_times %>%
   count(Name) %>%
