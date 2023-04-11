@@ -1,0 +1,138 @@
+---
+title: "Running EDA"
+author: "Thomas Sato"
+date: "2023-03-27"
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Loading in relevant packages
+library(tidyverse)
+```
+
+Loading in the data
+```{r, message=FALSE}
+running_times <- read_csv("runningtimes.csv")
+```
+
+Exploring the structure of the data + a few curiousities
+```{r}
+str(running_times)
+
+max(running_times$Place, na.rm = T)
+running_times %>%
+  filter(Place == 20)
+
+running_times %>%
+  count(Event, Gender)
+```
+The interesting thing to me here is seeing the lowest place of the dataset being 20th.  Imagine running one of the fastest times in the world and getting 20th place in the race.  That goes to show the talent of the field!
+It also looks like in this dataset that there are about 1,000 observations for each event for each gender.
+
+```{r}
+length(unique(running_times$Name))
+18244 / 2903
+```
+Chances are, if you have a top 1,000 time in your event, on average you will have 6.3 top 1,000 times.
+
+```{r}
+fastest <- running_times %>%
+  count(Country) %>%
+  arrange(desc(n))
+fastest
+```
+Perhaps unsurprisingly, Kenya has the most runners in the world with top times, with USA following closely behind.  I think I would have expected Ethiopia to be closer behind the USA at least in terms of most top times.
+
+```{r, message=FALSE}
+# Creating dataset of the top four countries and the number of top times by running event
+countries <- running_times %>%
+  filter(Country == c("KEN", "USA", "ETH", "JAM")) %>%
+  group_by(Event, Country) %>%
+  summarize(n = n())
+
+# Ordering the factor for events to make it look better in the graph
+running_times$Event <- as.factor(running_times$Event)
+running_times$Event <- factor(running_times$Event, levels = c("100 m", "200 m", "400 m", "800 m", "1500 m", 
+                                                              "5000 m", "10,000 m", "Half marathon", "Marathon"))
+
+ggplot(countries) +
+  geom_col(aes(x = Event, y = n, fill = Country), position = "fill") +
+  coord_flip() +
+  ylab("Proportion of Top Times for Each Event") +
+  ggtitle("Proportions of Top 4 Countries Represented in Each Running Event")
+```
+Jamaica and the USA dominate the shorter distance running events, but as the distances increase, the Kenyans and Ethiopians increasingly start to take a higher proportion of the top times.
+
+```{r}
+running_times <- running_times %>%
+  separate(Date, into = c("Year", "Month", "Day"), sep = "-")
+
+ggplot(running_times) +
+  geom_bar(aes(Month), fill = "blue") +
+  facet_wrap(~ Event) +
+  theme_bw() +
+  ggtitle("Distributions of Each Event by Month")
+```
+This graph is very interesting to me, and also surprising.  What stands out is the fact that in the shorter distance events up to 10,000 m, the top times seem to be clustered around the summer months, which makes sense as the Olympics are held in the summer.  I would have expected the half marathon and the marathon to also have higher clustering in the summer months as well.  I think perhaps one thing that might explain is that it is more difficult to run longer distances in such heat as in the summer, and that the conditions are better primed to run faster times in the colder months.  I think that most major marathons are held in the spring, and that may explain as well the number of fast times in the spring, and the fall as well.  The Boston Marathon is always held in April.
+```{r}
+ggplot(running_times) +
+  geom_bar(aes(Month, fill = Gender), position = position_dodge(preserve = "single")) +
+  facet_wrap(~ Event) +
+  theme_bw() +
+  ggtitle("Distributions of Each Event by Month, by Gender")
+```
+I don't see any super notable differences between men's and women's events in terms of distributions.  For the 5000 meter run, it looks like the distribution is more spead out, along with the 400 meter dash.  The men's 800 looks more spread out as well.
+
+```{r}
+ggplot(running_times) +
+  geom_bar(aes(Year)) +
+  facet_wrap(~ Event) +
+  theme_bw() +
+  ggtitle("Distributions of Each Event by Year") +
+  ylab("Count") +
+  theme(panel.spacing = unit(1.5, "lines"),
+        plot.margin = margin(10, 20, 10, 10))
+```
+The interesting thing about this graph to me is the fact that some buckets have over 200 observations in them, like the marathon between 2000 and 2020, how in one year, over 200 times people can run a top 1,000 time of all time.  It is also interesting to note the fact that the distributions from 400 m up until 5000 m are all relatively uniform, but it seems like in the shorter/longer events the athletes are getting faster as time goes on.
+
+```{r}
+marathon <- running_times %>%
+  filter(Event == "Marathon") %>%
+  count(Year) %>%
+  arrange(desc(n))
+marathon
+```
+```{r}
+running_times %>%
+  count(Name) %>%
+  arrange(desc(n)) %>%
+  head(n = 10)
+```
+The most interesting thing here is that I had never even heard of Marlene Ottey until donig this project!  And she has far and away more top times than the rest of the world.  Super impressive.
+
+```{r}
+# This tries to visualize the best cities for making a top time.
+
+top <- data.frame(City = character(), n = integer(), Event = character())
+for (i in seq(1:length(unique(running_times$Event)))) {
+  df <- running_times %>%
+    filter(Event == unique(running_times$Event)[i]) %>%
+    count(City) %>%
+    arrange(desc(n))
+  top[nrow(top) + 1,] <- c(df[1,], levels(unique(running_times$Event))[i])
+}
+
+top$Event <- factor(top$Event, levels = c("100 m", "200 m", "400 m", "800 m", "1500 m",
+                                          "5000 m", "10,000 m", "Half marathon", "Marathon"))
+
+ggplot(top) +
+  geom_col(aes(Event, n, fill = City)) +
+  theme_bw() +
+  ggtitle("Highest Quantity City for Top Times in Each Event") +
+  geom_text(aes(Event, n, label = City), vjust = -0.5) +
+  ylab("Number of Top Times") +
+  theme(legend.position = "none")
+```
+
